@@ -1,6 +1,7 @@
 package oauth
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -45,7 +46,7 @@ func (ae *AuthorizationEndpoint) Handle(c *gin.Context) {
 	}
 
 	// Check if valid redirect uri
-	redirectUri, err := validateRedirectUri(req.RedirectURI)
+	redirectUri, err := validateRedirectUri(req.RedirectURI, client)
 	if err != nil {
 		response.ErrorResponse(c, response.INVALID_REQUEST, req.State, "")
 	}
@@ -62,15 +63,14 @@ func (ae *AuthorizationEndpoint) Handle(c *gin.Context) {
 	// All check passed and continue flow
 	sessionID := uuid.New().String()
 	c.SetCookie("az-session-id", sessionID, 5*60, "/", "", true, true)
-	if err := ae.SessionStore.Add(sessionID,
-		&session.AuthzSession{
-			SessionID:    sessionID,
-			ResponseType: req.ResponseType,
-			ClientID:     client.ClientID,
-			RedirectURI:  redirectUri,
-			Scope:        scope,
-			State:        req.State,
-		}); err != nil {
+	authzSession := session.NewSession(
+		req.ResponseType,
+		client.ClientID,
+		redirectUri,
+		scope,
+		req.State,
+	)
+	if err := ae.SessionStore.Add(sessionID, authzSession); err != nil {
 		response.ErrorResponse(c, response.SERVER_ERROR, req.State, redirectUri)
 	}
 	c.HTML(http.StatusOK, "signin.html", nil)
@@ -101,11 +101,11 @@ func validateRedirectUri(redirectUri string, client client.Client) (string, erro
 	}
 
 	for _, uri := range client.RedirectURI {
-		if uri == redirectUri {
+		if uri.String() == redirectUri {
 			return redirectUri, nil
 		}
 	}
-	return "", err
+	return "", fmt.Errorf("not validate uri")
 }
 
 func filterScope(scope string, client client.Client) string {
