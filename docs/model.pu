@@ -1,0 +1,56 @@
+@startuml
+
+class Account {
+
+}
+
+class Tenant {
+
+}
+
+class User {
+
+}
+
+class Application {
+
+}
+
+interface Handler {
+  + Handle()
+}
+
+class AuthorizationEndpoint {
+  + Validator 
+}
+
+class SignIn {
+
+}
+
+class SessionStore {
+  + Save()
+  + FindByID()
+}
+
+class AccessToken {
+
+}
+
+class RefreshToken {
+
+}
+
+Handler <|-- AuthorizationEndpoint
+
+AuthorizationEndpoint --> UserStore
+AuthorizationEndpoint --> ApplicationStore
+AuthorizationEndpoint --> TenantStore
+AuthorizationEndpoint --> AccountStore
+AuthorizationEndpoint --> SessionStore
+
+SignIn --> AccessToken
+SignIn --> RefreshToken
+SignIn --> SessionStore
+
+@enduml
